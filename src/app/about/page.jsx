@@ -8,24 +8,19 @@ export default function AboutPage() {
 
   const teamMembers = [
     {
-      name: "Dr. Sarah Chen",
-      role: "Lead Researcher",
-      bio: "Astrophysicist specializing in exoplanet detection"
+      name: "Yousef Albasel",
+      role: "Team Lead",
+      bio: "Computer Science Student at Cairo University"
     },
     {
-      name: "Alex Rodriguez",
+      name: "Mohamed Ahmed",
       role: "ML Engineer",
-      bio: "Expert in deep learning and astronomical data analysis"
+      bio: "Mathmatics and Computer Science Student at Helwan University"
     },
     {
-      name: "Dr. James Wilson",
-      role: "Data Scientist",
-      bio: "NASA data pipeline specialist"
-    },
-    {
-      name: "Maya Patel",
-      role: "UI/UX Designer",
-      bio: "Making space exploration accessible to everyone"
+      name: "Anas Taha Yahya",
+      role: "ML Engineer",
+      bio: "Mathmatics and Computer Science Student at Helwan University"
     }
   ];
 
@@ -259,7 +254,7 @@ export default function AboutPage() {
               We're always looking for talented individuals who share our passion for space exploration and technology
             </p>
             <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300">
-              View Open Positions
+              <a href='https://www.linkedin.com/in/yousef-albasel-3040a0260/'> View Open Positions</a>
             </button>
           </div>
         </section>
