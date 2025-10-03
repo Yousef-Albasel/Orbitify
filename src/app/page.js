@@ -6,10 +6,14 @@ import { ChevronDown } from 'lucide-react';
 import StarField from './components/StarField';
 import Navigation from './components/Navigation';
 import InfoPanel from './components/InfoPanel';
-import ExoplanetViewer from './components/ExoplanetViewer';
+import ExoplanetViewer3D from './components/ExoplanetViewer3D';
+import ProblemSection from './components/ProblemSection';
 import { exoplanets } from './data/exoplanets';
+import SolutionSection from './components/SolutionSection';
+import ImpactSection from './components/ImpactSection';
+import DataSourcesSection from './components/DataSources';
 
-export default function ExoplanetExplorer() {
+export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,7 +45,9 @@ export default function ExoplanetExplorer() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
+    <div className="relative w-full bg-black overflow-hidden ">
+      <div className="relative h-screen">
+
       <StarField />
 
       <div 
@@ -82,7 +88,10 @@ export default function ExoplanetExplorer() {
           </div>
         </div>
 
-        <ExoplanetViewer planet={currentPlanet} isTransitioning={isTransitioning} />
+          <ExoplanetViewer3D 
+            planetType= {currentPlanet.type}
+            className="w-full h-[600px]"
+          />
         <InfoPanel planet={currentPlanet} />
       </div>
 
@@ -114,6 +123,12 @@ export default function ExoplanetExplorer() {
           →
         </button>
       </div>
+      </div>
+      <ProblemSection />
+      <SolutionSection />
+      <ImpactSection />
+      <DataSourcesSection />
+
     </div>
   );
 }

@@ -8,21 +8,34 @@
     "start": "next start"
   },
   "dependencies": {
+    "@langchain/cohere": "^0.3.4",
+    "@langchain/community": "^0.3.57",
+    "@langchain/groq": "^0.2.4",
+    "@prisma/client": "^6.16.3",
     "@tanstack/react-query": "^5.90.2",
+    "@xenova/transformers": "^2.17.2",
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "langchain": "^0.3.35",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
+    "pdf-parse": "^1.1.1",
     "plotly.js": "^3.1.1",
+    "prisma": "^6.16.3",
     "react": "^19.1.0",
     "react-dom": "19.1.0",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.63.0",
     "react-plotly.js": "^2.6.0",
+    "three": "^0.180.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "tailwindcss": "^4.1.14"
   }
 }
