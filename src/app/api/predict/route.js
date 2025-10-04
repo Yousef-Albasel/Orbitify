@@ -42,7 +42,7 @@ export async function POST(request) {
     const backendFormData = new FormData();
     backendFormData.append("file", blob, file.name);
 
-    const BACKEND_URL = process.env.BACKEND_URL || "fastapi-backend-production-b25a.up.railway.app/predict";
+    const BACKEND_URL = process.env.BACKEND_URL || "https://fastapi-backend-production-b25a.up.railway.app/predict";
 
     console.log(`Forwarding request to: ${BACKEND_URL}`);
 

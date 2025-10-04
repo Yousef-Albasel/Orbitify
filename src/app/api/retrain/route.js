@@ -24,7 +24,7 @@ export async function POST(request) {
     const backendFormData = new FormData();
     backendFormData.append('file', file);
 
-    const response = await fetch('fastapi-backend-production-b25a.up.railway.app/retrain', {
+    const response = await fetch('https://fastapi-backend-production-b25a.up.railway.app/retrain', {
       method: 'POST',
       body: backendFormData,
     });
