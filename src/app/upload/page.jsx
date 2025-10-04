@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, FileText, X, CheckCircle, AlertCircle, Loader, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Upload, FileText, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 export default function UploadPage() {
+  const router = useRouter();
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, success, error
-  const [predictions, setPredictions] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState('idle');
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -46,7 +47,6 @@ export default function UploadPage() {
 
   const handleRemoveFile = () => {
     setFile(null);
-    setPredictions(null);
     setUploadStatus('idle');
     setError('');
     if (fileInputRef.current) {
@@ -79,36 +79,21 @@ export default function UploadPage() {
         throw new Error(data.message || 'Prediction failed');
       }
       
-      setPredictions(data);
+      // Store results and redirect to analysis page
+      data.filename = file.name;
+      sessionStorage.setItem('predictions', JSON.stringify(data));
+      
       setUploadStatus('success');
+      
+      // Redirect after brief delay to show success state
+      setTimeout(() => {
+        router.push('/analysis');
+      }, 1000);
+      
     } catch (err) {
       setError(err.message || 'Failed to process file. Please try again.');
       setUploadStatus('error');
     }
-  };
-
-  const handleDownloadResults = () => {
-    if (!predictions || !predictions.preview) return;
-    
-    // Convert predictions to CSV
-    const headers = Object.keys(predictions.preview[0]);
-    const csvContent = [
-      headers.join(','),
-      ...predictions.preview.map(row => 
-        headers.map(header => row[header]).join(',')
-      )
-    ].join('\n');
-    
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `exoplanet_predictions_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
   };
 
   const formatFileSize = (bytes) => {
@@ -202,6 +187,7 @@ export default function UploadPage() {
                 <button
                   onClick={handleRemoveFile}
                   className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors"
+                  disabled={uploadStatus === 'uploading'}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -238,118 +224,55 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Success State */}
-        {uploadStatus === 'success' && predictions && (
-          <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 backdrop-blur-sm border border-green-500/30 rounded-3xl p-12">
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <CheckCircle className="w-12 h-12 text-green-400" />
-              <h3 className="text-3xl font-bold">Analysis Complete!</h3>
-            </div>
-            
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white/5 rounded-2xl p-6 text-center">
-                <p className="text-white/60 mb-2">Total Samples</p>
-                <p className="text-4xl font-bold text-blue-400">{predictions.total || 0}</p>
-              </div>
-              <div className="bg-white/5 rounded-2xl p-6 text-center">
-                <p className="text-white/60 mb-2">Exoplanets Detected</p>
-                <p className="text-4xl font-bold text-green-400">{predictions.exoplanets || 0}</p>
-              </div>
-              <div className="bg-white/5 rounded-2xl p-6 text-center">
-                <p className="text-white/60 mb-2">Avg Confidence</p>
-                <p className="text-4xl font-bold text-purple-400">{predictions.confidence || 0}%</p>
-              </div>
-            </div>
-
-            {/* Preview Table */}
-            {predictions.preview && predictions.preview.length > 0 && (
-              <div className="bg-white/5 rounded-2xl p-6 mb-8 overflow-x-auto">
-                <h4 className="text-xl font-bold mb-4">Top 10 Predictions</h4>
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="pb-3 pr-4">#</th>
-                      <th className="pb-3 pr-4">Prediction</th>
-                      <th className="pb-3">Probability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {predictions.preview.map((row, idx) => (
-                      <tr key={idx} className="border-b border-white/5">
-                        <td className="py-3 pr-4 text-white/60">{idx + 1}</td>
-                        <td className="py-3 pr-4">
-                          <span className={`px-3 py-1 rounded-full text-sm ${
-                            row.Prediction === 'Exoplanet' 
-                              ? 'bg-green-500/20 text-green-400' 
-                              : 'bg-red-500/20 text-red-400'
-                          }`}>
-                            {row.Prediction}
-                          </span>
-                        </td>
-                        <td className="py-3">{(row.Probability * 100).toFixed(2)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="flex gap-4 justify-center">
-              <button 
-                onClick={handleDownloadResults}
-                className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full font-semibold transition-colors flex items-center gap-2"
-              >
-                <Download className="w-5 h-5" />
-                Download Results
-              </button>
-              <button
-                onClick={handleRemoveFile}
-                className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
-              >
-                Analyze Another File
-              </button>
-            </div>
+        {/* Success State - Brief display before redirect */}
+        {uploadStatus === 'success' && (
+          <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 backdrop-blur-sm border border-green-500/30 rounded-3xl p-12 text-center">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-6" />
+            <h3 className="text-3xl font-bold mb-3">Analysis Complete!</h3>
+            <p className="text-white/60">Redirecting to dashboard...</p>
           </div>
         )}
 
         {/* Info Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mt-16">
-          <div className="bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold mb-4">Expected Format</h3>
-            <ul className="space-y-3 text-white/60">
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>CSV file with light curve time series data</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Columns should include time stamps and flux measurements</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Compatible with Kepler, K2, and TESS data formats</span>
-              </li>
-            </ul>
-          </div>
+        {uploadStatus === 'idle' && (
+          <div className="grid md:grid-cols-2 gap-8 mt-16">
+            <div className="bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold mb-4">Expected Format</h3>
+              <ul className="space-y-3 text-white/60">
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>CSV file with light curve time series data</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>Columns should include time stamps and flux measurements</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>Compatible with Kepler, K2, and TESS data formats</span>
+                </li>
+              </ul>
+            </div>
 
-          <div className="bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold mb-4">How It Works</h3>
-            <ul className="space-y-3 text-white/60">
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Upload your CSV file containing light curve data</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Our ML model analyzes patterns in the data</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Get instant predictions on potential exoplanet transits</span>
-              </li>
-            </ul>
+            <div className="bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold mb-4">How It Works</h3>
+              <ul className="space-y-3 text-white/60">
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>Upload your CSV file containing light curve data</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>Our ML model analyzes patterns in the data</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span>Get instant predictions on potential exoplanet transits</span>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

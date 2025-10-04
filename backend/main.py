@@ -54,7 +54,6 @@ def health_check():
         "status": "healthy",
         "model_loaded": model is not None
     }
-
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
@@ -63,34 +62,73 @@ async def predict(file: UploadFile = File(...)):
         X_processed = preprocess_data(df)
         predictions = model.predict(X_processed)
         probabilities = model.predict_proba(X_processed)[:, 1]
-        
-        # Clean NaN values
         predictions = np.nan_to_num(predictions, nan=0)
         probabilities = np.nan_to_num(probabilities, nan=0.0)
         
         df_results = df.copy()
-        df_results["Prediction"] = ["Exoplanet" if p == 1 else "False Positive" for p in predictions]
+        df_results["Prediction"] = ["CONFIRMED" if p == 1 else "FALSE POSITIVE" for p in predictions]
         df_results["Probability"] = probabilities
         
-        # Convert to native Python types and clean NaN
+        # Generate preview with explanations for ALL samples
         preview_data = []
-        for _, row in df_results[["Prediction", "Probability"]].head(10).iterrows():
+        # Use enumerate to get sequential position
+        for position, (idx, row) in enumerate(df_results.head(10).iterrows()):
+            prediction_label = "CONFIRMED" if predictions[position] == 1 else "FALSE POSITIVE"
+            explanation = explain_disposition(df.iloc[position], prediction_label)
+            
             preview_data.append({
-                "Prediction": str(row["Prediction"]),
-                "Probability": float(row["Probability"]) if not np.isnan(row["Probability"]) else 0.0
+                "Prediction": prediction_label,
+                "Probability": float(probabilities[position]) if not np.isnan(probabilities[position]) else 0.0,
+                "explanation": explanation  # Add explanation
             })
+            
+            # Debug print
+            print(f"Position {position}: {prediction_label}, Explanation length: {len(explanation) if explanation else 0}")
         
+        exoplanet_data = []
+        for idx, row in df_results[df_results["Prediction"] == "CONFIRMED"].iterrows():
+            if 'koi_prad' in df and 'koi_srad' in df and not pd.isna(row.get('koi_prad')) and not pd.isna(row.get('koi_srad')):
+                planet_vol = float(planet_volume(row['koi_prad']))
+                star_vol = float(star_volume(row['koi_srad']))
+                
+                # Get the position in the original dataframe
+                original_position = df.index.get_loc(idx)
+                
+                exoplanet_data.append({
+                    'kepoi_name': str(row.get('kepoi_name', f'KOI-{idx}')),
+                    'planet_radius_earth': float(row['koi_prad']),
+                    'star_radius_solar': float(row['koi_srad']),
+                    'planet_volume_km3': planet_vol,
+                    'star_volume_km3': star_vol,
+                    'planet_volume_earth': float(row['koi_prad'] ** 3),
+                    'star_volume_solar': float(row['koi_srad'] ** 3),
+                    'probability': float(row['Probability']),
+                    'explanation': explain_disposition(df.iloc[original_position], 'CONFRIMED')
+                })
+        
+        avg_planet_volume_earth = 0
+        avg_star_volume_solar = 0
+        if exoplanet_data:
+            avg_planet_volume_earth = np.mean([e['planet_volume_earth'] for e in exoplanet_data])
+            avg_star_volume_solar = np.mean([e['star_volume_solar'] for e in exoplanet_data])
+        
+        print("Preview data sample:", preview_data[0] if preview_data else "No data")
+
         return {
             "status": "success",
             "preview": preview_data,
             "total": int(len(df_results)),
             "exoplanets": int((predictions == 1).sum()),
-            "confidence": round(float(np.nanmean(probabilities) * 100), 2)
+            "confidence": round(float(np.nanmean(probabilities) * 100), 2),
+            "exoplanet_details": exoplanet_data[:5],
+            "avg_planet_volume_earth": float(avg_planet_volume_earth),
+            "avg_star_volume_solar": float(avg_star_volume_solar)
         }
 
     except Exception as e:
+        print(f"Error: {traceback.format_exc()}")
         return {"status": "error", "message": str(e)}
-    
+        
 @app.post("/retrain")
 async def retrain_model(file: UploadFile = File(...)):
     global model
@@ -102,7 +140,7 @@ async def retrain_model(file: UploadFile = File(...)):
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents), comment='#')
         
-        print(f"🔄 Retraining with {len(df)} rows")
+        print(f"Retraining with {len(df)} rows")
         
         X_processed, y_train = preprocess_data(df, retrain=True)
         

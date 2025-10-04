@@ -30,7 +30,7 @@ def explain_disposition(planet_row , prediction):
     kepoi_name = planet_row['kepoi_name']
     explanation = f"Explanation for {kepoi_name} (Disposition: {disposition}):\n"
 
-    if disposition == 'Exoplanet':
+    if disposition == 'CONFIRMED':
         explanation += ("This signal is a confirmed exoplanet. It has successfully passed all automated "
                         "and manual vetting checks, showing no signs of being a false positive.")
         return explanation
