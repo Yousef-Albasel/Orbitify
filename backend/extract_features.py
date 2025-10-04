@@ -31,7 +31,7 @@ def explain_disposition(planet_row , prediction):
     explanation = f"Explanation for {kepoi_name} (Disposition: {disposition}):\n"
 
     if disposition == 'Exoplanet':
-        explanation += ("✅ This signal is a confirmed exoplanet. It has successfully passed all automated "
+        explanation += ("This signal is a confirmed exoplanet. It has successfully passed all automated "
                         "and manual vetting checks, showing no signs of being a false positive.")
         return explanation
 
@@ -47,10 +47,10 @@ def explain_disposition(planet_row , prediction):
             reasons.append("the light curve's shape is characteristic of an eclipsing binary star system")
 
         if not reasons:
-            explanation += ("❌ This signal is a false positive. While no primary flags were raised in this dataset, "
+            explanation += ("This signal is a false positive. While no primary flags were raised in this dataset, "
                             "it was identified as non-planetary through other vetting procedures.")
         else:
-            explanation += f"❌ This signal is a false positive because {', and '.join(reasons)}."
+            explanation += f"This signal is a false positive because {', and '.join(reasons)}."
         return explanation
 
     return f"ℹ️ The status of {kepoi_name} is '{disposition}', which is pending further analysis."

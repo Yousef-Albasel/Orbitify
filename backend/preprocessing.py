@@ -48,6 +48,8 @@ def preprocess_data(df: pd.DataFrame , retrain: bool = False) -> pd.DataFrame:
     if retrain:
         df_clean = recite_target_mapping(df_clean)
     # Keep only cols_to_keep in the same order
+    df_clean = df_clean.drop(columns=["koi_disposition"], errors="ignore")
+
     X_filtered = df_clean[cols_to_keep]
     X_imputed_array = knn_imputer.transform(X_filtered)
     X_imputed = pd.DataFrame(
@@ -64,5 +66,7 @@ def preprocess_data(df: pd.DataFrame , retrain: bool = False) -> pd.DataFrame:
     X_final = X_scaled[selected_features]
     print(f"[DEBUG] After RFE selection: {X_final.shape}")
     print(f"[DEBUG] Final features: {X_final.columns.tolist()}")
-    
-    return X_final if not retrain else X_final , df_clean["target"]
+    if retrain:
+        return X_final, df_clean["target"]
+    else:
+        return X_final
