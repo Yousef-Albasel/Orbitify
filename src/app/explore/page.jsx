@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Database, Globe, TrendingUp, Target, Thermometer, Clock, Ruler, Maximize2, Search, Filter } from 'lucide-react';
+import { Database, Globe, TrendingUp, Target, Thermometer, Clock, Ruler, Maximize2, Search, Filter, BarChart3, Activity } from 'lucide-react';
 import * as THREE from 'three';
 
 const StarSystemViewer = ({ planets, onPlanetSelect, selectedPlanet, starName }) => {
@@ -16,6 +16,10 @@ const StarSystemViewer = ({ planets, onPlanetSelect, selectedPlanet, starName })
 
   useEffect(() => {
     if (!containerRef.current || !planets.length) return;
+
+    const container = containerRef.current;
+
+
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -233,9 +237,9 @@ const StarSystemViewer = ({ planets, onPlanetSelect, selectedPlanet, starName })
     canvas.addEventListener('click', handleClick);
 
     const handleResize = () => {
-      if (!containerRef.current) return;
-      const width = containerRef.current.clientWidth;
-      const height = containerRef.current.clientHeight;
+      if (!container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
@@ -244,26 +248,32 @@ const StarSystemViewer = ({ planets, onPlanetSelect, selectedPlanet, starName })
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseUp);
-      canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('click', handleClick);
+      if (canvas) {
+        canvas.removeEventListener('mousedown', handleMouseDown);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mouseleave', handleMouseUp);
+        canvas.removeEventListener('wheel', handleWheel);
+        canvas.removeEventListener('click', handleClick);
+      }
       
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       
-      renderer.dispose();
-      if (containerRef.current && renderer.domElement) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (renderer) {
+        renderer.dispose();
+        // Safely remove the renderer's DOM element
+        const rendererElement = renderer.domElement;
+        if (rendererElement) {
+          container.removeChild(rendererElement);
+        }
       }
     };
-  }, [planets, onPlanetSelect]);
+  }, [planets, onPlanetSelect, starName]);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[700px] rounded-2xl" style={{ touchAction: 'none' }}>
+    <div ref={containerRef} className="w-full h-full min-h-[700px] rounded-2xl relative" style={{ touchAction: 'none' }}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-white text-xl">Loading Star System...</div>
@@ -272,6 +282,202 @@ const StarSystemViewer = ({ planets, onPlanetSelect, selectedPlanet, starName })
       <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm px-4 py-3 rounded-xl text-white border border-white/20">
         <div className="font-bold text-lg mb-1">{starName}</div>
         <div className="text-sm text-white/60">Drag to rotate • Scroll to zoom • Click planets</div>
+      </div>
+    </div>
+  );
+};
+
+const SystemAnalysis = ({ system }) => {
+  const planets = system.planets;
+  
+  const avgOrbitalPeriod = (planets.reduce((sum, p) => sum + p.orbitalPeriod, 0) / planets.length).toFixed(2);
+  const avgRadius = (planets.reduce((sum, p) => sum + p.planetRadius, 0) / planets.length).toFixed(2);
+  const avgTemp = (planets.reduce((sum, p) => sum + p.equilibriumTemp, 0) / planets.length).toFixed(0);
+  const avgStellarRadius = (planets.reduce((sum, p) => sum + p.stellarRadius, 0) / planets.length).toFixed(3);
+  
+  const shortestPeriod = planets.reduce((min, p) => p.orbitalPeriod < min.orbitalPeriod ? p : min);
+  const longestPeriod = planets.reduce((max, p) => p.orbitalPeriod > max.orbitalPeriod ? p : max);
+  const hottestPlanet = planets.reduce((max, p) => p.equilibriumTemp > max.equilibriumTemp ? p : max);
+  const largestPlanet = planets.reduce((max, p) => p.planetRadius > max.planetRadius ? p : max);
+  
+  const tempCategories = {
+    ultraHot: planets.filter(p => p.equilibriumTemp > 1500).length,
+    hot: planets.filter(p => p.equilibriumTemp > 1000 && p.equilibriumTemp <= 1500).length,
+    warm: planets.filter(p => p.equilibriumTemp > 600 && p.equilibriumTemp <= 1000).length,
+    temperate: planets.filter(p => p.equilibriumTemp > 300 && p.equilibriumTemp <= 600).length,
+    cool: planets.filter(p => p.equilibriumTemp <= 300).length
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* System Overview */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-blue-400" />
+          System Overview
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+            <div className="text-white/60 text-xs mb-1">Total Planets</div>
+            <div className="text-2xl font-bold">{planets.length}</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+            <div className="text-white/60 text-xs mb-1">Avg Stellar Radius</div>
+            <div className="text-2xl font-bold">{avgStellarRadius} R☉</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+            <div className="text-white/60 text-xs mb-1">Avg Orbital Period</div>
+            <div className="text-2xl font-bold">{avgOrbitalPeriod}</div>
+            <div className="text-white/40 text-xs">days</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+            <div className="text-white/60 text-xs mb-1">Avg Temperature</div>
+            <div className="text-2xl font-bold">{avgTemp}</div>
+            <div className="text-white/40 text-xs">Kelvin</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Temperature Distribution */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+          <Thermometer className="w-5 h-5 text-orange-400" />
+          Temperature Distribution
+        </h3>
+        <div className="space-y-2">
+          {tempCategories.ultraHot > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-32 text-sm text-white/60">Ultra Hot (1500K)</div>
+              <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
+                <div 
+                  className="bg-red-500 h-full flex items-center justify-end pr-2 text-xs font-bold"
+                  style={{ width: `${(tempCategories.ultraHot / planets.length) * 100}%` }}
+                >
+                  {tempCategories.ultraHot}
+                </div>
+              </div>
+            </div>
+          )}
+          {tempCategories.hot > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-32 text-sm text-white/60">Hot (1000-1500K)</div>
+              <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
+                <div 
+                  className="bg-orange-500 h-full flex items-center justify-end pr-2 text-xs font-bold"
+                  style={{ width: `${(tempCategories.hot / planets.length) * 100}%` }}
+                >
+                  {tempCategories.hot}
+                </div>
+              </div>
+            </div>
+          )}
+          {tempCategories.warm > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-32 text-sm text-white/60">Warm (600-1000K)</div>
+              <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
+                <div 
+                  className="bg-yellow-500 h-full flex items-center justify-end pr-2 text-xs font-bold"
+                  style={{ width: `${(tempCategories.warm / planets.length) * 100}%` }}
+                >
+                  {tempCategories.warm}
+                </div>
+              </div>
+            </div>
+          )}
+          {tempCategories.temperate > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-32 text-sm text-white/60">Temperate (300-600K)</div>
+              <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
+                <div 
+                  className="bg-cyan-500 h-full flex items-center justify-end pr-2 text-xs font-bold"
+                  style={{ width: `${(tempCategories.temperate / planets.length) * 100}%` }}
+                >
+                  {tempCategories.temperate}
+                </div>
+              </div>
+            </div>
+          )}
+          {tempCategories.cool > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-32 text-sm text-white/60">Cool (300K)</div>
+              <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
+                <div 
+                  className="bg-blue-500 h-full flex items-center justify-end pr-2 text-xs font-bold"
+                  style={{ width: `${(tempCategories.cool / planets.length) * 100}%` }}
+                >
+                  {tempCategories.cool}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Notable Planets */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+          <Target className="w-5 h-5 text-purple-400" />
+          Notable Planets
+        </h3>
+        <div className="space-y-2">
+          <div className="bg-gradient-to-r from-purple-500/20 to-transparent border border-purple-500/30 rounded-lg p-3">
+            <div className="text-xs text-purple-300 mb-1">Closest to Star</div>
+            <div className="font-bold">{shortestPeriod.keplerName}</div>
+            <div className="text-sm text-white/60">{shortestPeriod.orbitalPeriod.toFixed(2)} day orbit</div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-blue-500/20 to-transparent border border-blue-500/30 rounded-lg p-3">
+            <div className="text-xs text-blue-300 mb-1">Farthest from Star</div>
+            <div className="font-bold">{longestPeriod.keplerName}</div>
+            <div className="text-sm text-white/60">{longestPeriod.orbitalPeriod.toFixed(2)} day orbit</div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-orange-500/20 to-transparent border border-orange-500/30 rounded-lg p-3">
+            <div className="text-xs text-orange-300 mb-1">Hottest Planet</div>
+            <div className="font-bold">{hottestPlanet.keplerName}</div>
+            <div className="text-sm text-white/60">{hottestPlanet.equilibriumTemp}K</div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-500/20 to-transparent border border-green-500/30 rounded-lg p-3">
+            <div className="text-xs text-green-300 mb-1">Largest Planet</div>
+            <div className="font-bold">{largestPlanet.keplerName}</div>
+            <div className="text-sm text-white/60">{largestPlanet.planetRadius.toFixed(2)} R⊕</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Key Insights */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-pink-400" />
+          Key Insights
+        </h3>
+        <div className="space-y-2 text-sm text-white/80">
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2"></div>
+            <div>
+              This system contains <strong>{planets.length} confirmed planets</strong> discovered by the Kepler mission
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2"></div>
+            <div>
+              Orbital periods range from <strong>{shortestPeriod.orbitalPeriod.toFixed(2)} to {longestPeriod.orbitalPeriod.toFixed(2)} days</strong>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2"></div>
+            <div>
+              Temperature range spans from <strong>{Math.min(...planets.map(p => p.equilibriumTemp))}K to {Math.max(...planets.map(p => p.equilibriumTemp))}K</strong>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2"></div>
+            <div>
+              Planet sizes vary from <strong>{Math.min(...planets.map(p => p.planetRadius)).toFixed(2)} to {Math.max(...planets.map(p => p.planetRadius)).toFixed(2)} Earth radii</strong>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -291,31 +497,38 @@ export default function ExoplanetExplorer() {
       try {
         const response = await fetch('/kepler_data.csv');
         const text = await response.text();
-        const rows = text.split('\n').slice(1);
         
-        const parsedData = rows
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const getCol = (cols, name) => {
+          const index = headers.indexOf(name.toLowerCase());
+          return index !== -1 ? cols[index]?.trim() : '';
+        };
+        
+        const parsedData = lines
+          .slice(1)
           .filter(row => row.trim())
           .map(row => {
             const cols = row.split(',');
             return {
-              kepId: cols[0],
-              koiName: cols[1],
-              keplerName: cols[2],
-              disposition: cols[4],
-              orbitalPeriod: parseFloat(cols[15]) || 0,
-              planetRadius: parseFloat(cols[19]) || 0,
-              equilibriumTemp: parseFloat(cols[20]) || 0,
-              transitDuration: parseFloat(cols[17]) || 0,
-              stellarRadius: parseFloat(cols[24]) || 0,
-              insolationFlux: parseFloat(cols[21]) || 0,
-              stellarTemp: parseFloat(cols[23]) || 0
+              kepId: getCol(cols, 'kepid'),
+              koiName: getCol(cols, 'kepoi_name'),
+              keplerName: getCol(cols, 'kepler_name'),
+              disposition: getCol(cols, 'koi_disposition'),
+              orbitalPeriod: parseFloat(getCol(cols, 'koi_period')) || 0,
+              planetRadius: parseFloat(getCol(cols, 'koi_prad')) || 0,
+              equilibriumTemp: parseFloat(getCol(cols, 'koi_teq')) || 0,
+              transitDuration: parseFloat(getCol(cols, 'koi_duration')) || 0,
+              stellarRadius: parseFloat(getCol(cols, 'koi_srad')) || 0,
+              insolationFlux: parseFloat(getCol(cols, 'koi_insol')) || 0,
+              stellarTemp: parseFloat(getCol(cols, 'koi_steff')) || 0
             };
           })
           .filter(p => p.disposition === 'CONFIRMED' && p.keplerName && p.orbitalPeriod > 0);
-
+          
         setKeplerData(parsedData);
 
-        // Group by star system
         const systemsMap = {};
         parsedData.forEach(planet => {
           const starMatch = planet.keplerName.match(/Kepler-(\d+)/);
@@ -344,7 +557,6 @@ export default function ExoplanetExplorer() {
           setSelectedStar(systems[0]);
         }
 
-        // Calculate stats
         const totalPlanets = parsedData.length;
         const avgOrbital = parsedData.reduce((sum, p) => sum + p.orbitalPeriod, 0) / totalPlanets;
         const avgRadius = parsedData.reduce((sum, p) => sum + p.planetRadius, 0) / totalPlanets;
@@ -365,7 +577,6 @@ export default function ExoplanetExplorer() {
         setLoading(false);
       } catch (error) {
         console.error('Error loading data:', error);
-        console.error('Error stack:', error.stack);
         setLoading(false);
       }
     };
@@ -387,7 +598,6 @@ export default function ExoplanetExplorer() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Background */}
       <div className="fixed inset-0 opacity-20 pointer-events-none">
         {[...Array(100)].map((_, i) => (
           <div
@@ -510,11 +720,12 @@ export default function ExoplanetExplorer() {
             </div>
           </div>
 
-          {/* 3D Visualization */}
-          <div className="col-span-9">
-            <div className="bg-gradient-to-br from-white/5 to-white/0 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+          {/* 3D Visualization and Analysis */}
+          <div className="col-span-6">
+            <div className="bg-gradient-to-br from-white/5 to-white/0 border border-white/10 rounded-2xl p-4 backdrop-blur-sm mb-6">
               {selectedStar && (
                 <StarSystemViewer
+                  key={selectedStar.name}
                   planets={selectedStar.planets}
                   starName={selectedStar.name}
                   onPlanetSelect={setSelectedPlanet}
@@ -523,17 +734,24 @@ export default function ExoplanetExplorer() {
               )}
             </div>
           </div>
+
+          {/* System Analysis */}
+          <div className="col-span-3">
+            <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm max-h-[800px] overflow-y-auto">
+              {selectedStar && <SystemAnalysis system={selectedStar} />}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Planet Details Panel */}
       {selectedPlanet && (
-        <div className="fixed right-8 top-1/2 -translate-y-1/2 w-96 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl z-20 max-h-[80vh] overflow-y-auto">
+        <div className="fixed left-8 bottom-8 w-96 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl z-20 max-h-[500px] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold">{selectedPlanet.keplerName}</h3>
             <button 
               onClick={() => setSelectedPlanet(null)}
-              className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-all"
+              className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-all text-2xl"
             >
               ×
             </button>

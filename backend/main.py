@@ -26,12 +26,12 @@ app = FastAPI(
 try:
     if exists("models/fineturned_catboost.pkl"):
         model = joblib.load("models/fineturned_catboost.pkl")
-        print("✅ Loaded fine-tuned model")
+        print("Loaded fine-tuned model")
     else:
         model = joblib.load("models/catboost_exoplanet_model.pkl")
-        print("✅ Loaded base model")
+        print("Loaded base model")
 except Exception as e:
-    print(f"❌ Failed to load model: {e}")
+    print(f"Failed to load model: {e}")
     model = None
 
 app.add_middleware(

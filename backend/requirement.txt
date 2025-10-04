@@ -1,0 +1,21 @@
+# Core dependencies
+fastapi==0.115.0
+uvicorn==0.31.1
+pandas==2.2.3
+numpy==2.1.2
+joblib==1.4.2
+
+# Machine learning / preprocessing
+scikit-learn==1.5.2
+catboost==1.2.7
+shap==0.46.0
+
+# Visualization
+matplotlib==3.9.2
+
+# For retraining / model IO
+scipy==1.14.1
+
+# Optional (safe to include)
+tqdm==4.66.5
+python-multipart==0.0.9  # required for file uploads

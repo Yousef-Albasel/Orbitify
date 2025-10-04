@@ -21,26 +21,37 @@ export default function AnalysisPage() {
     }
   }, []);
 
-  // Three.js 3D Visualization
-  // Replace the Three.js useEffect (around line 39) with this:
-useEffect(() => {
+  useEffect(() => {
   if (!canvasRef.current || !results?.exoplanet_details?.[selectedExoplanet] || activeTab !== 'visualization') return;
 
   const exoplanet = results.exoplanet_details[selectedExoplanet];
   
-  // Clear previous scene
+  // Clear previous scene properly
   if (sceneRef.current) {
     if (sceneRef.current.animationId) {
       cancelAnimationFrame(sceneRef.current.animationId);
     }
+    if (sceneRef.current.scene) {
+      sceneRef.current.scene.traverse((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) {
+          if (Array.isArray(object.material)) {
+            object.material.forEach(mat => mat.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
+      });
+    }
     if (sceneRef.current.renderer) {
       sceneRef.current.renderer.dispose();
-    }
-    while(canvasRef.current.firstChild) {
-      canvasRef.current.removeChild(canvasRef.current.firstChild);
+      if (canvasRef.current && sceneRef.current.renderer.domElement.parentNode === canvasRef.current) {
+        canvasRef.current.removeChild(sceneRef.current.renderer.domElement);
+      }
     }
   }
 
+  // Initialize new scene
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     75, 
@@ -53,13 +64,14 @@ useEffect(() => {
   renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
   canvasRef.current.appendChild(renderer.domElement);
 
-  // Rest of your Three.js code stays the same...
+  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
   const pointLight = new THREE.PointLight(0xffffff, 1);
   pointLight.position.set(50, 50, 50);
   scene.add(pointLight);
 
+  // Calculate sizes
   const earthRadius = 1;
   const exoplanetRadius = Math.cbrt(exoplanet.planet_volume_earth) * earthRadius;
   const starRadius = Math.cbrt(exoplanet.star_volume_solar) * earthRadius * 109;
@@ -71,6 +83,7 @@ useEffect(() => {
   const exoplanetSize = exoplanetRadius * scaleFactor;
   const starSize = Math.min(starRadius * scaleFactor, 40);
 
+  // Create Earth
   const earthGeometry = new THREE.SphereGeometry(earthSize, 32, 32);
   const earthMaterial = new THREE.MeshPhongMaterial({ 
     color: 0x2563eb,
@@ -81,6 +94,7 @@ useEffect(() => {
   earth.position.x = -30;
   scene.add(earth);
 
+  // Create Exoplanet
   const exoplanetGeometry = new THREE.SphereGeometry(exoplanetSize, 32, 32);
   const exoplanetMaterial = new THREE.MeshPhongMaterial({ 
     color: 0x10b981,
@@ -91,6 +105,7 @@ useEffect(() => {
   exoplanetMesh.position.x = 0;
   scene.add(exoplanetMesh);
 
+  // Create Star
   const starGeometry = new THREE.SphereGeometry(starSize, 32, 32);
   const starMaterial = new THREE.MeshPhongMaterial({ 
     color: 0xfbbf24,
@@ -102,10 +117,12 @@ useEffect(() => {
   starMesh.position.x = 50;
   scene.add(starMesh);
 
+  // Position camera
   camera.position.z = 80;
   camera.position.y = 20;
   camera.lookAt(0, 0, 0);
 
+  // Animation loop
   let animationId;
   const animate = () => {
     animationId = requestAnimationFrame(animate);
@@ -120,12 +137,26 @@ useEffect(() => {
 
   sceneRef.current = { scene, camera, renderer, animationId };
 
+  // Cleanup function
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
-    if (renderer) renderer.dispose();
+    scene.traverse((object) => {
+      if (object.geometry) object.geometry.dispose();
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach(mat => mat.dispose());
+        } else {
+          object.material.dispose();
+        }
+      }
+    });
+    renderer.dispose();
+    if (canvasRef.current && renderer.domElement.parentNode === canvasRef.current) {
+      canvasRef.current.removeChild(renderer.domElement);
+    }
   };
-}, [results, selectedExoplanet, activeTab]);
 
+}, [results, selectedExoplanet, activeTab]);
   const handleDownload = () => {
     if (!results || !results.preview) return;
     
