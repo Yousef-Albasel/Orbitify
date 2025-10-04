@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import shap
 import pandas as pd
 from preprocessing import preprocess_data 
 from extract_features import planet_volume, star_volume, explain_disposition
@@ -7,6 +9,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 from catboost import CatBoostClassifier
 import joblib
+from datetime import datetime
+import matplotlib.pyplot as plt
+
 from os.path import exists
 import io
 import numpy as np
@@ -64,7 +69,23 @@ async def predict(file: UploadFile = File(...)):
         probabilities = model.predict_proba(X_processed)[:, 1]
         predictions = np.nan_to_num(predictions, nan=0)
         probabilities = np.nan_to_num(probabilities, nan=0.0)
+            
+        explainer = shap.TreeExplainer(model)
+
+        shap_values = explainer.shap_values(X_processed)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"shap_summary_{timestamp}.png"
+        filepath = f"plots/{filename}"
         
+        # Generate SHAP plot
+        plt.figure(figsize=(10, 8))
+        shap.summary_plot(shap_values, X_processed, show=False)
+
+        # Save to disk
+        plt.savefig(filepath, bbox_inches='tight', dpi=150)
+        plt.close()
+
         df_results = df.copy()
         df_results["Prediction"] = ["CONFIRMED" if p == 1 else "FALSE POSITIVE" for p in predictions]
         df_results["Probability"] = probabilities
@@ -122,7 +143,12 @@ async def predict(file: UploadFile = File(...)):
             "confidence": round(float(np.nanmean(probabilities) * 100), 2),
             "exoplanet_details": exoplanet_data[:5],
             "avg_planet_volume_earth": float(avg_planet_volume_earth),
-            "avg_star_volume_solar": float(avg_star_volume_solar)
+            "avg_star_volume_solar": float(avg_star_volume_solar),
+            "shap_plot": FileResponse(
+                    filepath,
+                    media_type="image/png",
+                    filename=filename
+                )
         }
 
     except Exception as e:
