@@ -9,8 +9,8 @@ export default function Navbar() {
 
   const navLinks = [
     { href: "/explore", label: "Explore" },
+    { href: "/upload", label: "Upload" },
     { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
   ];
 
   return (
@@ -64,7 +64,7 @@ export default function Navbar() {
           <button className="relative px-6 py-2 rounded-full font-semibold text-sm overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white-500 to-white opacity-100 group-hover:opacity-0 transition-opacity duration-300"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white-500 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <span className="relative z-10 text-black">Get Started</span>
+            <a href="./chat"><span className="relative z-10 text-black">Chat with AI</span></a>
           </button>
         </div>
       </div>
