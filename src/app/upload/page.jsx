@@ -54,34 +54,62 @@ export default function UploadPage() {
     }
   };
 
-//   const handleUpload = async () => {
-//     if (!file) return;
+  const handleUpload = async () => {
+    if (!file) return;
 
-//     setUploadStatus('uploading');
-//     setError('');
+    setUploadStatus('uploading');
+    setError('');
 
-//     try {
-//       const formData = new FormData();
-//       formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-//       // TODO: Replace with your actual API endpoint
-//       const response = await fetch('/api/predict', {
-//         method: 'POST',
-//         body: formData,
-//       });
+      const response = await fetch('/api/predict', {
+        method: 'POST',
+        body: formData,
+      });
 
-//       if (!response.ok) {
-//         throw new Error('Upload failed');
-//       }
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
 
-//       const data = await response.json();
-//       setPredictions(data);
-//       setUploadStatus('success');
-//     } catch (err) {
-//       setError('Failed to process file. Please try again.');
-//       setUploadStatus('error');
-//     }
-//   };
+      const data = await response.json();
+      
+      if (data.status === 'error') {
+        throw new Error(data.message || 'Prediction failed');
+      }
+      
+      setPredictions(data);
+      setUploadStatus('success');
+    } catch (err) {
+      setError(err.message || 'Failed to process file. Please try again.');
+      setUploadStatus('error');
+    }
+  };
+
+  const handleDownloadResults = () => {
+    if (!predictions || !predictions.preview) return;
+    
+    // Convert predictions to CSV
+    const headers = Object.keys(predictions.preview[0]);
+    const csvContent = [
+      headers.join(','),
+      ...predictions.preview.map(row => 
+        headers.map(header => row[header]).join(',')
+      )
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exoplanet_predictions_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -228,13 +256,49 @@ export default function UploadPage() {
                 <p className="text-4xl font-bold text-green-400">{predictions.exoplanets || 0}</p>
               </div>
               <div className="bg-white/5 rounded-2xl p-6 text-center">
-                <p className="text-white/60 mb-2">Confidence</p>
+                <p className="text-white/60 mb-2">Avg Confidence</p>
                 <p className="text-4xl font-bold text-purple-400">{predictions.confidence || 0}%</p>
               </div>
             </div>
 
+            {/* Preview Table */}
+            {predictions.preview && predictions.preview.length > 0 && (
+              <div className="bg-white/5 rounded-2xl p-6 mb-8 overflow-x-auto">
+                <h4 className="text-xl font-bold mb-4">Top 10 Predictions</h4>
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="pb-3 pr-4">#</th>
+                      <th className="pb-3 pr-4">Prediction</th>
+                      <th className="pb-3">Probability</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {predictions.preview.map((row, idx) => (
+                      <tr key={idx} className="border-b border-white/5">
+                        <td className="py-3 pr-4 text-white/60">{idx + 1}</td>
+                        <td className="py-3 pr-4">
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            row.Prediction === 'Exoplanet' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {row.Prediction}
+                          </span>
+                        </td>
+                        <td className="py-3">{(row.Probability * 100).toFixed(2)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <div className="flex gap-4 justify-center">
-              <button className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full font-semibold transition-colors flex items-center gap-2">
+              <button 
+                onClick={handleDownloadResults}
+                className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full font-semibold transition-colors flex items-center gap-2"
+              >
                 <Download className="w-5 h-5" />
                 Download Results
               </button>
